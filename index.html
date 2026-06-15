@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Солнцевский Транспорт — Интерактивное Расписание</title>
+  <style>
+    :root {
+      --solntsevo-amber: #FFA000;
+      --solntsevo-dark: #1A1A1A;
+      --solntsevo-gray: #F8FAFC;
+      --solntsevo-card: #FFFFFF;
+      --solntsevo-border: #E2E8F0;
+      --text-main: #1A1A1A;
+      --text-muted: #64748B;
+      --status-green: #2E7D32;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--solntsevo-gray);
+      color: var(--text-main);
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      background: var(--solntsevo-card);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--solntsevo-border);
+    }
+
+    /* Фирменный заголовок */
+    header {
+      background-color: var(--solntsevo-amber);
+      color: var(--solntsevo-dark);
+      padding: 36px 32px;
+      border-bottom: 4px solid var(--solntsevo-dark);
+      position: relative;
+    }
+
+    header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+
+    .version-badge {
+      position: absolute;
+      right: 32px;
+      top: 42px;
+      background: var(--solntsevo-dark);
+      color: var(--solntsevo-amber);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    /* Основная часть виджета */
+    .widget-content {
+      padding: 32px;
+    }
+
+    .field-group {
+      margin-bottom: 20px;
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.8px;
+    }
+
+    /* Переключатель дней */
+    .day-selector {
+      display: flex;
+      gap: 12px;
+    }
+
+    .day-option {
+      flex: 1;
+      background: #E2E8F0;
+      border: none;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      border-radius: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .day-option.active {
+      background: var(--solntsevo-dark);
+      color: var(--solntsevo-amber);
+    }
+
+    /* Стилизация селекторов */
+    .custom-select {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 600;
+      border: 2px solid var(--solntsevo-border);
+      border-radius: 12px;
+      background-color: #FAFBFC;
+      color: var(--text-main);
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231A1A1A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 18px center;
+      background-size: 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .custom-select:focus {
+      border-color: var(--solntsevo-amber);
+      background-color: #FFFFFF;
+    }
+
+    .custom-select:disabled {
+      background-color: #F1F5F9;
+      color: #94A3B8;
+      cursor: not-allowed;
+      background-image: none;
+      border-color: var(--solntsevo-border);
+    }
+
+    /* Блок вывода расписания */
+    .output-board {
+      background: #F8FAFC;
+      border: 2px dashed var(--solntsevo-border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 28px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .output-board.populated {
+      background: #FFFFFF;
+      border: 2px solid var(--solntsevo-dark);
+      text-align: left;
+    }
+
+    .meta-route-name {
+      font-size: 16px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--solntsevo-dark);
+      background: var(--solntsevo-amber);
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--solntsevo-dark);
+    }
+
+    .meta-direction {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .meta-current-stop {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--solntsevo-dark);
+      margin-bottom: 20px;
+    }
+
+    /* Табло прибытия */
+    .grid-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .time-badge {
+      background: var(--solntsevo-dark);
+      color: var(--solntsevo-amber);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 18px;
+      font-weight: 800;
+      min-width: 80px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .placeholder-text {
+      color: #94A3B8;
+      font-style: italic;
+      font-size: 15px;
+    }
+
+    .disclaimer {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      display: block;
+      line-height: 1.4;
+    }
+
+    /* Подвал */
+    footer {
+      background: var(--solntsevo-dark);
+      color: #94A3B8;
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border-top: 1px solid #2D2D2D;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Солнцевский Транспорт</h1>
+    <p>Модуль автоматического расчета графика движения</p>
+    <div class="version-badge">СТАНДАРТ 2026</div>
+  </header>
+
+  <div class="widget-content">
+    <!-- Календарный тип -->
+    <div class="field-group">
+      <label>Режим движения</label>
+      <div class="day-selector">
+        <button type="button" class="day-option active" id="tabWorkday" onclick="changeDayMode('workday')">Будние дни</button>
+        <button type="button" class="day-option" id="tabWeekend" onclick="changeDayMode('weekend')">Выходные дни</button>
+      </div>
+    </div>
+
+    <!-- Выбор Маршрута -->
+    <div class="field-group">
+      <label for="selectRoute">Маршрутная линия</label>
+      <select id="selectRoute" class="custom-select" onchange="handleRouteSelect()">
+        <option value="">-- Выберите из реестра СВТСОРНС --</option>
+        <option value="c2">Маршрут с2 (Ж/Д станция — Малая Зуевка)</option>
+        <option value="13п">Маршрут 13п (Детский лагерь — Центр)</option>
+        <option value="c11">Маршрут с11 (Конарево-1 — Река Сейм)</option>
+        <option value="6п">Маршрут 6п (Рябиновая улица — Солнцевское кладбище)</option>
+        <option value="3п">Маршрут 3п (Река Сейм — Центр)</option>
+        <option value="c5">Маршрут с5 (Детский лагерь — Детский лагерь) [Кольцевой]</option>
+      </select>
+    </div>
+
+    <!-- Выбор Направления -->
+    <div class="field-group">
+      <label for="selectDirection">Направление</label>
+      <select id="selectDirection" class="custom-select" disabled onchange="handleDirectionSelect()">
+        <option value="">-- Ожидание выбора маршрута --</option>
+      </select>
+    </div>
+
+    <!-- Выбор Остановки -->
+    <div class="field-group">
+      <label for="selectStop">Остановочный пункт</label>
+      <select id="selectStop" class="custom-select" disabled onchange="renderSchedule()">
+        <option value="">-- Ожидание выбора направления --</option>
+      </select>
+    </div>
+
+    <!-- Результаты вычислений -->
+    <div id="boardContainer" class="output-board">
+      <div id="boardContent" class="placeholder-text">
+        Задайте параметры маршрута, направления и остановочного пункта для генерации электронного табло.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Унифицированный цифровой сервис • Администрация городского округа Солнцево
+  </footer>
+</div>
+
+<script>
+  // Структурированная база данных вымышленной сети Солнцева
+  const database = {
+    c2: {
+      title: "Маршрут с2",
+      timings: {
+        workday: ["06:00", "07:30", "09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00", "19:30", "21:00"],
+        weekend: ["07:00", "09:00", "11:00", "13:00", "15:00", "17:00", "19:00", "21:00"]
+      },
+      vectors: {
+        forward: {
+          name: "Прямое: к Малой Зуевке",
+          points: [
+            { label: "Ж/Д станция", delay: 0 },
+            { label: "Площадь", delay: 6 },
+            { label: "Улица Ленина", delay: 12 },
+            { label: "Малая Зуевка (Конечная)", delay: 22 }
+          ]
+        },
+        backward: {
+          name: "Обратное: к Ж/Д станции",
+          points: [
+            { label: "Малая Зуевка", delay: 0 },
+            { label: "Улица Ленина", delay: 9 },
+            { label: "Площадь", delay: 15 },
+            { label: "Ж/Д станция (Конечная)", delay: 22 }
+          ]
+        }
+      }
+    },
+    "13п": {
+      title: "Маршрут 13п",
+      timings: {
+        workday: ["07:15", "08:45", "10:15", "12:15", "14:15", "16:15", "17:45", "19:15"],
+        weekend: ["08:00", "10:30", "13:00", "15:30", "18:00"]
+      },
+      vectors: {
+        forward: {
+          name: "Прямое: к Центру",
+          points: [
+            { label: "Детский лагерь", delay: 0 },
+            { label: "Развилка", delay: 7 },
+            { label: "Центр (Конечная)", delay: 16 }
+          ]
+        },
+        backward: {
+          name: "Обратное: к Детскому лагерю",
+          points: [
+            { label: "Центр", delay: 0 },
+            { label: "Развилка", delay: 8 },
+            { label: "Детский лагерь (Конечная)", delay: 16 }
+          ]
+        }
+      }
+    },
+    c11: {
+      title: "Маршрут с11",
+      timings: {
+        workday: ["05:50", "07:10", "08:30", "10:30", "12:30", "14:30", "16:10", "17:30", "19:00"],
+        weekend: ["07:00", "09:00", "11:00", "13:00", "15:00", "17:00", "19:00"]
+      },
+      vectors: {
+        forward: {
+          name: "Прямое: к Реке Сейм",
+          points: [
+            { label: "Конарево-1", delay: 0 },
+            { label: "Переезд", delay: 10 },
+            { label: "Река Сейм (Конечная)", delay: 21 }
+          ]
+        },
+        backward: {
+          name: "Обратное: к Конарево-1",
+          points: [
+            { label: "Река Сейм", delay: 0 },
+            { label: "Переезд", delay: 11 },
+            { label: "Конарево-1 (Конечная)", delay: 21 }
+          ]
+        }
+      }
+    },
+    "6п": {
+      title: "Маршрут 6п",
+      timings: {
+        workday: ["07:40", "09:40", "11:40", "13:40", "15:40", "17:40"],
+        weekend: ["08:40", "11:40", "14:40", "17:40"]
+      },
+      vectors: {
+        forward: {
+          name: "Прямое: к Солнцевскому кладбищу",
+          points: [
+            { label: "Рябиновая улица", delay: 0 },
+            { label: "Перекрёсток", delay: 6 },
+            { label: "Солнцевское кладбище (Конечная)", delay: 14 }
+          ]
+        },
+        backward: {
+          name: "Обратное: к Рябиновой улице",
+          points: [
+            { label: "Солнцевское кладбище", delay: 0 },
+            { label: "Перекрёсток", delay: 8 },
+            { label: "Рябиновая улица (Конечная)", delay: 14 }
+          ]
+        }
+      }
+    },
+    "3п": {
+      title: "Маршрут 3п",
+      timings: {
+        workday: ["06:20", "07:40", "09:00", "10:40", "12:20", "14:00", "15:40", "17:00", "18:20", "19:50"],
+        weekend: ["07:20", "09:20", "11:20", "13:20", "15:20", "17:20", "19:20"]
+      },
+      vectors: {
+        forward: {
+          name: "Прямое: к Центру",
+          points: [
+            { label: "Река Сейм", delay: 0 },
+            { label: "Новая линия", delay: 8 },
+            { label: "Центр (Конечная)", delay: 17 }
+          ]
+        },
+        backward: {
+          name: "Обратное: к Реке Сейм",
+          points: [
+            { label: "Центр", delay: 0 },
+            { label: "Новая линия", delay: 9 },
+            { label: "Река Сейм (Конечная)", delay: 17 }
+          ]
+        }
+      }
+    },
+    c5: {
+      title: "Маршрут с5 [Кольцевой]",
+      timings: {
+        workday: ["06:40", "08:10", "10:20", "12:50", "15:10", "17:20", "19:30"],
+        weekend: ["07:40", "10:20", "13:00", "15:40", "18:20"]
+      },
+      vectors: {
+        circular: {
+          name: "По часовой стрелке (Кольцевое движение)",
+          points: [
+            { label: "Детский лагерь (Старт)", delay: 0 },
+            { label: "Ларёк быстрого питания «Сити»", delay: 5 },
+            { label: "Улица Чибисовка", delay: 11 },
+            { label: "Профучилище №31", delay: 17 },
+            { label: "Обоянская улица", delay: 23 },
+            { label: "Болотный переулок", delay: 29 },
+            { label: "Детский лагерь (Финиш)", delay: 35 }
+          ]
+        }
+      }
+    }
+  };
+
+  let globalDayMode = 'workday';
+
+  function changeDayMode(mode) {
+    globalDayMode = mode;
+    document.getElementById('tabWorkday').classList.toggle('active', mode === 'workday');
+    document.getElementById('tabWeekend').classList.toggle('active', mode === 'weekend');
+    renderSchedule();
+  }
+
+  function handleRouteSelect() {
+    const routeId = document.getElementById('selectRoute').value;
+    const dirSelect = document.getElementById('selectDirection');
+    const stopSelect = document.getElementById('selectStop');
+
+    dirSelect.innerHTML = '<option value="">-- Выберите направление --</option>';
+    stopSelect.innerHTML = '<option value="">-- Сначала определите направление --</option>';
+    stopSelect.disabled = true;
+
+    if (!routeId) {
+      dirSelect.disabled = true;
+      clearBoard();
+      return;
+    }
+
+    const routeData = database[routeId];
+    for (let vecId in routeData.vectors) {
+      const opt = document.createElement('option');
+      opt.value = vecId;
+      opt.textContent = routeData.vectors[vecId].name;
+      dirSelect.appendChild(opt);
+    }
+
+    dirSelect.disabled = false;
+
+    if (Object.keys(routeData.vectors).length === 1) {
+      dirSelect.selectedIndex = 1;
+      handleDirectionSelect();
+    } else {
+      clearBoard();
+    }
+  }
+
+  function handleDirectionSelect() {
+    const routeId = document.getElementById('selectRoute').value;
+    const vecId = document.getElementById('selectDirection').value;
+    const stopSelect = document.getElementById('selectStop');
+
+    stopSelect.innerHTML = '<option value="">-- Выберите остановку --</option>';
+
+    if (!vecId) {
+      stopSelect.disabled = true;
+      clearBoard();
+      return;
+    }
+
+    const vectorData = database[routeId].vectors[vecId];
+    vectorData.points.forEach((pt, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = pt.label + (pt.delay === 0 ? " (Начальная)" : " (+" + pt.delay + " мин)");
+      stopSelect.appendChild(opt);
+    });
+
+    stopSelect.disabled = false;
+    clearBoard();
+  }
+
+  function clearBoard() {
+    const container = document.getElementById('boardContainer');
+    const content = document.getElementById('boardContent');
+    container.className = 'output-board';
+    content.className = 'placeholder-text';
+    content.innerHTML = 'Задайте параметры маршрута, направления и остановочного пункта для генерации электронного табло.';
+  }
+
+  function recalculateTime(baseTime, delayMinutes) {
+    let [hours, minutes] = baseTime.split(':').map(Number);
+    minutes += delayMinutes;
+    hours += Math.floor(minutes / 60);
+    minutes = minutes % 60;
+    hours = hours % 24;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  }
+
+  function renderSchedule() {
+    const routeId = document.getElementById('selectRoute').value;
+    const vecId = document.getElementById('selectDirection').value;
+    const stopIdx = document.getElementById('selectStop').value;
+    const container = document.getElementById('boardContainer');
+    const content = document.getElementById('boardContent');
+
+    if (!routeId || !vecId || stopIdx === "") return;
+
+    const route = database[routeId];
+    const vector = route.vectors[vecId];
+    const targetPoint = vector.points[stopIdx];
+    const startTimings = route.timings[globalDayMode];
+
+    container.className = 'output-board populated';
+    content.className = '';
+
+    let template = `<div class="meta-route-name">${route.title}</div>`;
+    template += `<div class="meta-direction">🧭 ${vector.name}</div>`;
+    template += `<div class="meta-current-stop">📍 ${targetPoint.label}</div>`;
+    template += `<div style="font-size: 13px; font-weight: 700; margin-bottom: 4px;">Плановое время прибытия транспорта:</div>`;
+
+    if (!startTimings || startTimings.length === 0) {
+      template += `<div style="color: #C62828; font-weight: 700; margin-top: 10px;">В выбранные дни рейсы не предусмотрены.</div>`;
+    } else {
+      template += `<div class="grid-container">`;
+      startTimings.forEach(time => {
+        const arrivalTime = recalculateTime(time, targetPoint.delay);
+        template += `<div class="time-badge">${arrivalTime}</div>`;
+      });
+      template += `</div>`;
+      template += `<span class="disclaimer">* Точность интерактивного тайминга откалибрована с учетом удаленности платформы от пункта отправления (+${targetPoint.delay} мин) в рамках единой транспортной реформы.</span>`;
+    }
+
+    content.innerHTML = template;
+  }
+</script>
+
+</body>
+</html>
