@@ -1,0 +1,3299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Солнцевский Транспорт — Интерактивное Расписание</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --solntsevo-accent: #FFA000;
+      --solntsevo-dark: #0F172A;
+      --solntsevo-border: rgba(15, 23, 42, 0.15);
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --solntsevo-success: #10B981;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #FFB300 0%, #FF6D00 100%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      padding: 16px 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 650px;
+      background: #FFFFFF;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+      border: 1px solid var(--solntsevo-border);
+    }
+
+    header {
+      background: var(--solntsevo-accent);
+      padding: 32px 24px;
+      text-align: left;
+    }
+
+    header h1 {
+      font-size: 29px;
+      font-weight: 700;
+      color: var(--solntsevo-dark);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+
+    .widget-content {
+      padding: 24px 20px;
+    }
+
+    @media (min-width: 480px) {
+      body { padding: 40px 20px; }
+      header { padding: 36px 32px; }
+      .widget-content { padding: 32px; }
+      header h1 { font-size: 35px; }
+    }
+
+    .fare-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    @media (min-width: 520px) {
+      .fare-container {
+        flex-direction: row;
+      }
+    }
+
+    .fare-toggle-btn {
+      flex: 1;
+      width: 100%;
+      background: #F8FAFC;
+      border: 1px solid var(--solntsevo-border);
+      padding: 14px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--solntsevo-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      text-decoration: none;
+    }
+
+    @media (min-width: 520px) {
+      .fare-toggle-btn {
+        font-size: 14.5px;
+        padding: 14px 14px;
+      }
+    }
+
+    .fare-toggle-btn:hover {
+      background: #F1F5F9;
+      border-color: rgba(15, 23, 42, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.3);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #FFFFFF;
+      border-radius: 24px;
+      padding: 32px 24px;
+      width: 95%;
+      max-width: 430px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+      transform: scale(0.92);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-align: center;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--solntsevo-dark);
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .modal-fare-grid {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .modal-fare-item {
+      flex: 1;
+      background: linear-gradient(135deg, rgba(255, 247, 237, 1) 0%, rgba(255, 237, 213, 1) 100%);
+      border: 2px solid var(--solntsevo-accent);
+      border-radius: 16px;
+      padding: 18px 12px;
+      box-shadow: 0 4px 10px rgba(255, 160, 0, 0.05);
+    }
+
+    .modal-scheme-list {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .scheme-option-card {
+      position: relative;
+      display: block;
+      flex: 1 1 0;
+      min-width: 0;
+      aspect-ratio: 3 / 4;
+      background-repeat: no-repeat;
+      border: 2px solid var(--solntsevo-accent);
+      border-radius: 16px;
+      overflow: hidden;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(255, 160, 0, 0.05);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .scheme-option-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 70%;
+      background: linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0) 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .scheme-option-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(255, 160, 0, 0.25);
+      border-color: #FF6D00;
+    }
+
+    .scheme-option-title {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 2;
+      color: #FFFFFF;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: left;
+      overflow-wrap: anywhere;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    @media (max-width: 380px) {
+      .modal-scheme-list { flex-direction: column; }
+      .scheme-option-card { flex: none; width: 100%; aspect-ratio: 16 / 10; }
+    }
+
+    .modal-fare-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #9A3412;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .modal-fare-price {
+      font-size: 29px;
+      font-weight: 700;
+      color: var(--solntsevo-dark);
+    }
+
+    .modal-disclaimer {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .concept-fine-box {
+      background-color: #FFF6F6; 
+      border: 2px solid #F1A8A8; 
+      border-radius: 16px;
+      padding: 24px 16px;
+      margin-bottom: 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .concept-fine-title {
+      color: #D32F2F; 
+      font-size: 17px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .concept-fine-amount {
+      color: #D32F2F; 
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+
+    .concept-fine-subtitle {
+      color: #8C8C8C; 
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .modal-close-btn {
+      width: 100%;
+      background: var(--solntsevo-dark);
+      color: #FFFFFF;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .modal-close-btn:hover {
+      background: #1E293B;
+    }
+
+    .ico {
+      width: 1.35em;
+      height: 1.35em;
+      object-fit: contain;
+      vertical-align: -0.28em;
+      margin-right: 8px;
+    }
+
+    .ico-lg { width: 1.2em; height: 1.2em; vertical-align: -0.2em; }
+
+    .ico-btn { width: 26px; height: 26px; margin-right: 12px; vertical-align: middle; }
+
+    .btn-label { display: flex; align-items: center; }
+
+    .field-group {
+      margin-bottom: 20px;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .field-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--solntsevo-dark);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+      opacity: 0.8;
+    }
+
+    .day-selector {
+      display: flex;
+      gap: 10px;
+    }
+
+    .day-option {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid var(--solntsevo-border);
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      border-radius: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .day-option.active {
+      background: var(--solntsevo-dark);
+      color: #FFFFFF;
+      border-color: var(--solntsevo-dark);
+    }
+
+    .buttons-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .selection-btn {
+      width: 100%;
+      background: #F8FAFC;
+      border: 2px solid var(--solntsevo-border);
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--solntsevo-dark);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.02);
+    }
+
+    .selection-btn:hover {
+      border-color: var(--solntsevo-accent);
+      background-color: #FFFDF9;
+      box-shadow: 0 4px 10px rgba(255, 160, 0, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .reset-link {
+      background: none;
+      border: none;
+      color: #DD6B20;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .reset-link:hover {
+      background: rgba(221, 107, 32, 0.08);
+    }
+
+    .custom-dropdown-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .custom-dropdown-trigger {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-weight: 600;
+      border: 2px solid var(--solntsevo-border);
+      border-radius: 12px;
+      background-color: #FFFFFF;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: left;
+      transition: all 0.2s ease;
+      user-select: none;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.02);
+    }
+
+    .custom-dropdown-trigger span:first-child {
+      flex: 1;
+      padding-right: 16px;
+      line-height: 1.3;
+    }
+
+    .custom-dropdown-trigger .icon {
+      font-size: 15px;
+      color: #94A3B8;
+      transition: transform 0.2s ease, color 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .custom-dropdown-trigger:not(.disabled):hover {
+      border-color: var(--solntsevo-accent);
+      background-color: #FFFDF9;
+      box-shadow: 0 4px 10px rgba(255, 160, 0, 0.08);
+    }
+
+    .custom-dropdown-trigger:not(.disabled):hover .icon {
+      color: var(--solntsevo-accent);
+    }
+
+    .custom-dropdown-container.open .custom-dropdown-trigger {
+      border-color: var(--solntsevo-accent);
+      background-color: #FFFFFF;
+      border-bottom-left-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+
+    .custom-dropdown-container.open .custom-dropdown-trigger .icon {
+      transform: rotate(180deg);
+      color: var(--solntsevo-accent);
+    }
+
+    .custom-dropdown-options {
+      position: absolute;
+      top: calc(100% - 2px);
+      left: 0;
+      right: 0;
+      background: #FFFFFF;
+      border: 2px solid var(--solntsevo-accent);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    }
+
+    .custom-dropdown-options::-webkit-scrollbar { width: 6px; }
+    .custom-dropdown-options::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 0 0 12px 0; }
+    .custom-dropdown-options::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 6px; }
+
+    .custom-dropdown-container.open .custom-dropdown-options {
+      display: block;
+      animation: dropDownAnim 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes dropDownAnim {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .custom-option {
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-main);
+      cursor: pointer;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      transition: background 0.15s, color 0.15s;
+      line-height: 1.4;
+    }
+
+    .custom-option:last-child { border-bottom: none; }
+    .custom-option:hover, .custom-option.selected {
+      background: #FFF7ED;
+      color: #9A3412;
+      font-weight: 600;
+    }
+
+    .custom-option.selected::after {
+      content: '✓';
+      float: right;
+      color: var(--solntsevo-accent);
+      font-weight: 700;
+    }
+
+    .ready-pulse {
+      animation: pulse-ready 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    @keyframes pulse-ready {
+      0% { border-color: var(--solntsevo-border); box-shadow: 0 0 0 0 rgba(255, 160, 0, 0); }
+      50% { border-color: var(--solntsevo-accent); box-shadow: 0 0 0 6px rgba(255, 160, 0, 0.2); }
+      100% { border-color: var(--solntsevo-border); box-shadow: 0 0 0 0 rgba(255, 160, 0, 0); }
+    }
+
+    .output-board {
+      background: #F8FAFC;
+      border: 2px dashed rgba(15, 23, 42, 0.15);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 24px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .output-board.populated {
+      background: #FFFFFF;
+      border: 1.5px solid var(--solntsevo-dark);
+      text-align: left;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .meta-route-name {
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--solntsevo-dark);
+      background: #FFF7ED;
+      padding: 5px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 12px;
+      border: 1px solid #FED7AA;
+    }
+
+    .meta-direction {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .meta-current-stop {
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--solntsevo-dark);
+      margin-bottom: 16px;
+    }
+
+    .grid-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .time-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1 1 calc(25% - 10px);
+      min-width: 70px;
+    }
+
+    .time-badge {
+      background: var(--solntsevo-dark);
+      color: #FFFFFF;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      width: 100%;
+      text-align: center;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      min-width: max-content;
+    }
+
+    .time-badge.next-closest {
+      background: var(--solntsevo-success);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+      transform: scale(1.04);
+    }
+
+    .time-badge.departed {
+      background: rgba(15, 23, 42, 0.1);
+      color: #64748B;
+      text-decoration: line-through;
+      font-weight: 500;
+    }
+
+    .arrival-status {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--solntsevo-success);
+      text-align: center;
+      white-space: normal;
+    }
+
+    .arrival-status.arriving {
+      color: #EF4444;
+      animation: status-blink 1s infinite alternate;
+    }
+
+    @keyframes status-blink {
+      from { opacity: 0.5; }
+      to { opacity: 1; }
+    }
+
+    .tomorrow-badge {
+      background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+      border: 1px solid var(--solntsevo-accent);
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: #9A3412;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 6px rgba(255, 160, 0, 0.05);
+    }
+
+    .departed-section {
+      margin-top: 20px;
+      border-top: 1px dashed rgba(0,0,0,0.15);
+      padding-top: 14px;
+    }
+
+    .departed-toggle-btn {
+      background: #F8FAFC;
+      border: 1px solid var(--solntsevo-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .departed-toggle-btn:hover {
+      background: #F1F5F9;
+      color: var(--solntsevo-dark);
+      border-color: rgba(0,0,0,0.2);
+    }
+
+    .departed-toggle-btn .arrow {
+      transition: transform 0.2s ease;
+      font-size: 12px;
+    }
+
+    .departed-section.open .departed-toggle-btn .arrow {
+      transform: rotate(180deg);
+    }
+
+    .departed-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease-out;
+    }
+
+    .departed-section.open .departed-panel {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+
+    .placeholder-text {
+      color: #475569;
+      font-size: 15px;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+
+    .disclaimer {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 14px;
+      display: block;
+      line-height: 1.4;
+    }
+
+    .disclaimer-box {
+      background: #F8FAFC;
+      padding: 20px;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.5;
+      border-top: 1px solid var(--solntsevo-border);
+      text-align: center;
+    }
+
+    footer {
+      background: var(--solntsevo-dark);
+      color: #94A3B8;
+      text-align: center;
+      padding: 16px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+  
+    /* ===== Проверка «я не робот» ===== */
+    #gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(135deg, #FFB300 0%, #FF6D00 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; transition: opacity .3s ease;
+    }
+    #gate.hide { opacity: 0; pointer-events: none; }
+    .gate-card {
+      width: 100%; max-width: 380px; background: #FFFFFF; border-radius: 24px; overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25); border: 1px solid var(--solntsevo-border);
+      text-align: center;
+    }
+    .gate-head { background: var(--solntsevo-accent); padding: 22px 24px; text-align: left; }
+    .gate-head b { display: block; font-size: 22px; font-weight: 800; color: var(--solntsevo-dark); letter-spacing: -0.5px; }
+    .gate-head span { font-size: 13px; font-weight: 600; color: rgba(15, 23, 42, 0.7); }
+    .gate-body { padding: 32px 24px 28px; }
+    .gate-spin {
+      width: 44px; height: 44px; margin: 0 auto 18px; border-radius: 50%;
+      border: 4px solid rgba(255, 160, 0, 0.25); border-top-color: var(--solntsevo-accent);
+      animation: gateSpin .8s linear infinite;
+    }
+    @keyframes gateSpin { to { transform: rotate(360deg); } }
+    #gateTitle { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 6px; }
+    #gateMsg { font-size: 14px; font-weight: 500; color: var(--text-muted); line-height: 1.4; }
+    #gateTs { display: flex; justify-content: center; margin-top: 14px; }
+    .gate-btn {
+      display: none; margin: 20px auto 0; padding: 13px 28px; border: none; border-radius: 14px;
+      background: var(--solntsevo-accent); color: var(--solntsevo-dark); font-size: 15px; font-weight: 800; cursor: pointer;
+    }
+    #gate.err .gate-spin { display: none; }
+    #gate.err .gate-btn { display: inline-block; }
+
+    /* ===================================================================
+       LIQUID GLASS (стиль iOS 26) — только оформление.
+       Логика, разметка и проверка Turnstile не затронуты.
+       =================================================================== */
+    :root {
+      --lg-fill: rgba(255, 255, 255, 0.34);
+      --lg-fill-strong: rgba(255, 255, 255, 0.58);
+      --lg-fill-soft: rgba(255, 255, 255, 0.22);
+      --lg-blur: blur(26px) saturate(190%) brightness(1.06);
+      --lg-blur-soft: blur(14px) saturate(170%);
+      --lg-edge: rgba(255, 255, 255, 0.55);
+      --lg-rim:
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.25),
+        inset 1px 0 0 rgba(255, 255, 255, 0.35),
+        inset -1px 0 0 rgba(255, 255, 255, 0.2),
+        inset 0 0 22px rgba(255, 255, 255, 0.22);
+      --lg-drop: 0 22px 44px -14px rgba(124, 45, 0, 0.38), 0 4px 12px rgba(124, 45, 0, 0.10);
+    }
+
+    /* Цветные «капли» под стеклом, чтобы было что преломлять */
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      z-index: -1;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(60px);
+    }
+    body::before {
+      width: 62vmax; height: 62vmax; top: -18vmax; left: -14vmax;
+      background: radial-gradient(circle, rgba(255, 235, 150, 0.85), rgba(255, 235, 150, 0) 68%);
+    }
+    body::after {
+      width: 56vmax; height: 56vmax; right: -16vmax; bottom: -20vmax;
+      background: radial-gradient(circle, rgba(255, 90, 40, 0.75), rgba(255, 90, 40, 0) 68%);
+    }
+
+    /* ---------- Главная карточка ---------- */
+    .container {
+      position: relative;
+      background: var(--lg-fill);
+      -webkit-backdrop-filter: var(--lg-blur);
+      backdrop-filter: var(--lg-blur);
+      border: 1px solid var(--lg-edge);
+      box-shadow: var(--lg-rim), var(--lg-drop);
+    }
+    /* блик, скользящий по верхней кромке */
+    .container::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(155deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 32%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .container > * { position: relative; z-index: 1; }
+
+    header {
+      background: linear-gradient(180deg, rgba(255, 176, 20, 0.62), rgba(255, 160, 0, 0.40));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    /* ---------- Кнопки и поля ---------- */
+    .fare-toggle-btn,
+    .selection-btn,
+    .day-option,
+    .departed-toggle-btn,
+    .custom-dropdown-trigger {
+      background: var(--lg-fill-strong);
+      -webkit-backdrop-filter: var(--lg-blur-soft);
+      backdrop-filter: var(--lg-blur-soft);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: var(--lg-rim), 0 6px 14px -6px rgba(124, 45, 0, 0.25);
+      border-radius: 16px;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .fare-toggle-btn:hover,
+    .selection-btn:hover,
+    .day-option:not(.active):hover,
+    .departed-toggle-btn:hover,
+    .custom-dropdown-trigger:not(.disabled):hover {
+      background: rgba(255, 255, 255, 0.78);
+      border-color: rgba(255, 255, 255, 0.9);
+      box-shadow: var(--lg-rim), 0 10px 20px -8px rgba(255, 140, 0, 0.45);
+      transform: translateY(-1px);
+    }
+    .fare-toggle-btn:active,
+    .selection-btn:active,
+    .day-option:active,
+    .departed-toggle-btn:active,
+    .custom-dropdown-trigger:active {
+      transform: scale(0.97);
+    }
+    .selection-btn { border-width: 1px; }
+
+    .day-option.active {
+      background: rgba(15, 23, 42, 0.78);
+      color: #FFFFFF;
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 18px -8px rgba(15, 23, 42, 0.6);
+    }
+
+    .custom-dropdown-container.open .custom-dropdown-trigger {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(255, 190, 70, 0.9);
+    }
+    .custom-dropdown-options {
+      background: rgba(255, 255, 255, 0.82);
+      -webkit-backdrop-filter: var(--lg-blur);
+      backdrop-filter: var(--lg-blur);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 18px;
+      top: calc(100% + 6px);
+      box-shadow: var(--lg-rim), 0 18px 34px -10px rgba(124, 45, 0, 0.35);
+      overflow-x: hidden;
+    }
+    .custom-dropdown-container.open .custom-dropdown-trigger {
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+    }
+    .custom-option { border-bottom-color: rgba(15, 23, 42, 0.06); }
+    .custom-option:hover,
+    .custom-option.selected { background: rgba(255, 160, 0, 0.18); }
+
+    /* ---------- Табло ---------- */
+    .output-board {
+      background: var(--lg-fill-soft);
+      border: 1.5px dashed rgba(15, 23, 42, 0.22);
+      border-radius: 20px;
+    }
+    .output-board.populated {
+      background: rgba(255, 255, 255, 0.55);
+      -webkit-backdrop-filter: var(--lg-blur-soft);
+      backdrop-filter: var(--lg-blur-soft);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: var(--lg-rim), 0 12px 26px -12px rgba(124, 45, 0, 0.35);
+    }
+    .meta-route-name {
+      background: rgba(255, 247, 237, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 999px;
+      padding: 5px 14px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+    .time-badge {
+      background: rgba(15, 23, 42, 0.80);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 12px -6px rgba(15, 23, 42, 0.5);
+    }
+    .time-badge.next-closest {
+      background: rgba(16, 185, 129, 0.92);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 3px rgba(16, 185, 129, 0.28),
+                  0 10px 20px -8px rgba(16, 185, 129, 0.7);
+    }
+    .time-badge.departed {
+      background: rgba(15, 23, 42, 0.08);
+      border-color: rgba(15, 23, 42, 0.05);
+      box-shadow: none;
+    }
+    .tomorrow-badge {
+      background: rgba(255, 247, 237, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 16px;
+      box-shadow: var(--lg-rim);
+    }
+    .reset-link { border-radius: 999px; }
+
+    .disclaimer-box {
+      background: rgba(255, 255, 255, 0.28);
+      border-top: 1px solid rgba(255, 255, 255, 0.55);
+      color: #334155;
+    }
+    footer {
+      background: rgba(15, 23, 42, 0.72);
+      -webkit-backdrop-filter: var(--lg-blur-soft);
+      backdrop-filter: var(--lg-blur-soft);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      color: #CBD5E1;
+    }
+
+    /* ---------- Модальные окна ----------
+       Размытие вынесено в ::before, чтобы карточка тоже «видела» страницу
+       (вложенный backdrop-filter внутри родителя с backdrop-filter не работает). */
+    .modal-overlay {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: rgba(15, 23, 42, 0.22);
+    }
+    .modal-overlay::before {
+      content: '';
+      position: absolute; inset: 0;
+      -webkit-backdrop-filter: blur(8px) saturate(140%);
+      backdrop-filter: blur(8px) saturate(140%);
+      pointer-events: none;
+    }
+    .modal-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.55);
+      -webkit-backdrop-filter: var(--lg-blur);
+      backdrop-filter: var(--lg-blur);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      border-radius: 32px;
+      box-shadow: var(--lg-rim), 0 30px 60px -16px rgba(15, 23, 42, 0.45);
+    }
+    .modal-fare-item {
+      background: rgba(255, 237, 213, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 20px;
+      box-shadow: var(--lg-rim), 0 8px 18px -10px rgba(255, 140, 0, 0.5);
+    }
+    .concept-fine-box {
+      background: rgba(255, 246, 246, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 20px;
+      box-shadow: var(--lg-rim), 0 8px 18px -10px rgba(211, 47, 47, 0.4);
+    }
+    .scheme-option-card {
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      box-shadow: var(--lg-rim), 0 10px 20px -10px rgba(15, 23, 42, 0.5);
+    }
+    .modal-close-btn {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 18px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 20px -8px rgba(15, 23, 42, 0.55);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+    }
+    .modal-close-btn:active { transform: scale(0.97); }
+
+    /* ---------- Экран проверки (только карточка; Turnstile не трогаем) ---------- */
+    .gate-card {
+      background: rgba(255, 255, 255, 0.45);
+      -webkit-backdrop-filter: var(--lg-blur);
+      backdrop-filter: var(--lg-blur);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 32px;
+      box-shadow: var(--lg-rim), 0 30px 60px -16px rgba(124, 45, 0, 0.45);
+    }
+    .gate-head {
+      background: linear-gradient(180deg, rgba(255, 176, 20, 0.65), rgba(255, 160, 0, 0.42));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .gate-btn {
+      background: rgba(255, 160, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 20px -8px rgba(255, 120, 0, 0.6);
+    }
+
+    /* ---------- Фолбэки ---------- */
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .container { background: rgba(255, 255, 255, 0.92); }
+      .modal-card, .gate-card { background: rgba(255, 255, 255, 0.96); }
+      .custom-dropdown-options { background: #FFFFFF; }
+      .fare-toggle-btn, .selection-btn, .day-option, .departed-toggle-btn,
+      .custom-dropdown-trigger { background: #F8FAFC; }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .container { background: rgba(255, 255, 255, 0.95); }
+      .modal-card, .gate-card { background: rgba(255, 255, 255, 0.97); }
+      .container, .modal-card, .gate-card, .custom-dropdown-options,
+      .fare-toggle-btn, .selection-btn, .day-option { -webkit-backdrop-filter: none; backdrop-filter: none; }
+    }
+  </style>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</head>
+<body>
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-head"><b>Солнцевский Транспорт</b><span>Интерактивное расписание</span></div>
+    <div class="gate-body">
+      <div class="gate-spin"></div>
+      <div id="gateTitle">Проверка безопасности</div>
+      <div id="gateMsg">Проверяем, что вы не робот…</div>
+      <div id="gateTs"></div>
+      <button type="button" class="gate-btn" onclick="location.reload()">Повторить</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="container">
+  <header>
+    <h1>
+      Солнцевский транспорт
+    </h1>
+  </header>
+
+  <div class="widget-content">
+    
+    <div class="fare-container">
+      <button type="button" class="fare-toggle-btn" id="fareBtn" onclick="toggleFareModal(true)">
+        <span class="btn-label"><img class="ico ico-btn" src="free-icon-ticket-validator-2054271.png" alt="">Стоимость проезда</span>
+        <span style="color: var(--solntsevo-accent)">➔</span>
+      </button>
+      <button type="button" class="fare-toggle-btn" id="schemeBtn" onclick="toggleSchemeModal(true)">
+        <span class="btn-label"><img class="ico ico-btn" src="free-icon-road-map-3162947.png" alt="">Схемы транспорта</span>
+        <span style="color: var(--solntsevo-accent)">➔</span>
+      </button>
+    </div>
+
+    <div class="field-group" id="routeFieldGroup">
+      <label>Выберите маршрут</label>
+      <div class="buttons-grid" id="routeButtonsContainer"></div>
+    </div>
+
+    <div class="field-group" id="dirFieldGroup" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label style="margin-bottom: 0;">Выберите направление</label>
+        <button type="button" class="reset-link" onclick="resetFlow()">↩ Сбросить</button>
+      </div>
+      <div class="buttons-grid" id="dirButtonsContainer"></div>
+    </div>
+
+    <div class="field-group" id="stopFieldGroup" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label style="margin-bottom: 0;">Выберите остановку</label>
+        <button type="button" class="reset-link" onclick="resetFlow()">↩ Сбросить поиск</button>
+      </div>
+      <div class="custom-dropdown-container" id="stopDropdown">
+        <div class="custom-dropdown-trigger" id="stopTrigger" onclick="toggleDropdown(event, 'stopDropdown')">
+          <span id="stopLabel" style="color: #64748B;">-- Выберите остановку --</span>
+          <span class="icon" id="stopIcon">▼</span>
+        </div>
+        <div class="custom-dropdown-options" id="stopOptions"></div>
+      </div>
+    </div>
+
+    <div class="field-group" id="dayModeFieldGroup" style="display: none;">
+      <label>Режим движения транспорта</label>
+      <div class="day-selector">
+        <button type="button" class="day-option active" id="tabWorkday" onclick="changeDayMode('workday')">Будни</button>
+        <button type="button" class="day-option" id="tabWeekend" onclick="changeDayMode('weekend')">Выходные</button>
+      </div>
+    </div>
+
+    <div id="boardContainer" class="output-board">
+      <div id="boardContent" class="placeholder-text">
+        Выберите параметры выше для вывода актуального расписания.
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer-box">
+    <strong>Внимание!</strong> Сервис, маршруты и расписание являются полностью вымышленными. Проект создан в демонстрационных целях на основе топонимики посёлка Солнцево.
+  </div>
+
+  <footer>
+    Унифициционный цифровой сервис • Администрация городского округа Солнцево
+  </footer>
+</div>
+
+<div class="modal-overlay" id="fareModal" onclick="toggleFareModal(false)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title">Стоимость проезда</div>
+    <div class="modal-fare-grid">
+      <div class="modal-fare-item">
+        <div class="modal-fare-label">Картой / СБП</div>
+        <div class="modal-fare-price">32 ₽</div>
+      </div>
+      <div class="modal-fare-item">
+        <div class="modal-fare-label">Наличными</div>
+        <div class="modal-fare-price">39 ₽</div>
+      </div>
+    </div>
+    <div class="modal-disclaimer">Льготы действуют на всех маршрутах городского округа.</div>
+    
+    <div class="concept-fine-box">
+      <div class="concept-fine-title">ШТРАФ ЗА БЕЗБИЛЕТНЫЙ ПРОЕЗД:</div>
+      <div class="concept-fine-amount">1500 ₽</div>
+      <div class="concept-fine-subtitle">Штраф уже за повторное нарушение: 3000 ₽</div>
+    </div>
+
+    <button type="button" class="modal-close-btn" onclick="toggleFareModal(false)">Понятно</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="schemeModal" onclick="toggleSchemeModal(false)">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title">Выберите тип схемы</div>
+    
+    <div class="modal-scheme-list">
+      <a href="maps.html" class="scheme-option-card" style="background-image: url('MapboxScheme.jpg'), linear-gradient(135deg, #1E293B, #0F172A);">
+        <span class="scheme-option-title">Интерактивная схема с расписанием</span>
+      </a>
+
+      <a href="https://yandex.ru/maps/?um=constructor%3Aadde7256b0867267b61a6d15bfdd2ef8c316e64ab25f849999afc411588e47d2&source=constructorLink" target="_blank" rel="noopener" class="scheme-option-card" style="background-image: url('yandex_scheme.jpg'), linear-gradient(135deg, #FFB300, #FF6D00);">
+        <span class="scheme-option-title">Электронная схема</span>
+      </a>
+    </div>
+
+    <button type="button" class="modal-close-btn" style="margin-top: 8px;" onclick="toggleSchemeModal(false)">Закрыть</button>
+  </div>
+</div>
+
+<script>
+  function toggleFareModal(show) {
+    const modal = document.getElementById('fareModal');
+    if (show) modal.classList.add('active');
+    else modal.classList.remove('active');
+  }
+
+  function toggleSchemeModal(show) {
+    const modal = document.getElementById('schemeModal');
+    if (show) modal.classList.add('active');
+    else modal.classList.remove('active');
+  }
+
+  const database = {
+  "2": {
+    "fullName": "Автобус 2 (Автостанция — ЖДС Шумаково)",
+    "title": "Маршрут 2",
+    "timings": {
+      "workday": [
+        "06:00",
+        "06:30",
+        "07:00",
+        "07:30",
+        "08:00",
+        "08:30",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "15:30",
+        "16:00",
+        "16:30",
+        "17:00",
+        "17:30",
+        "18:00",
+        "18:30",
+        "19:00",
+        "20:00",
+        "21:00",
+        "22:30"
+      ],
+      "weekend": [
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00",
+        "20:00",
+        "21:00",
+        "22:00"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: ЖДС Шумаково",
+        "points": [
+          {
+            "label": "Автостанция",
+            "delay": 0
+          },
+          {
+            "label": "Почтовая улица, дом 29",
+            "delay": 2
+          },
+          {
+            "label": "Сеть быстрого питания «Сити»",
+            "delay": 4
+          },
+          {
+            "label": "Ветклиника",
+            "delay": 6
+          },
+          {
+            "label": "Кафе «Афродита»",
+            "delay": 7
+          },
+          {
+            "label": "Дом Культуры",
+            "delay": 9
+          },
+          {
+            "label": "Ручей Меловский",
+            "delay": 11
+          },
+          {
+            "label": "Дорожная улица",
+            "delay": 14
+          },
+          {
+            "label": "Зуевский Дом культуры",
+            "delay": 15
+          },
+          {
+            "label": "АЗС на Погореловке",
+            "delay": 17
+          },
+          {
+            "label": "Пляж",
+            "delay": 19
+          },
+          {
+            "label": "Урочище Дубовое",
+            "delay": 23
+          },
+          {
+            "label": "Малая Зуевка",
+            "delay": 24
+          },
+          {
+            "label": "Малозуевское кладбище",
+            "delay": 25
+          },
+          {
+            "label": "Урочище Зуевское",
+            "delay": 28
+          },
+          {
+            "label": "Пляж",
+            "delay": 29
+          },
+          {
+            "label": "Урочище Мандрыкино",
+            "delay": 31
+          },
+          {
+            "label": "Меловая-1",
+            "delay": 34
+          },
+          {
+            "label": "Заречная улица - Меловая-2",
+            "delay": 35
+          },
+          {
+            "label": "Меловая-3",
+            "delay": 38
+          },
+          {
+            "label": "Корпоративная",
+            "delay": 41
+          },
+          {
+            "label": "Улица Марии Овсянниковой",
+            "delay": 43
+          },
+          {
+            "label": "Выползовское кладбище",
+            "delay": 49
+          },
+          {
+            "label": "Урочище Выгори",
+            "delay": 50
+          },
+          {
+            "label": "Выползово",
+            "delay": 52
+          },
+          {
+            "label": "Гвардейская улица",
+            "delay": 55
+          },
+          {
+            "label": "Урочище Роща",
+            "delay": 56
+          },
+          {
+            "label": "Второе Максимово",
+            "delay": 58
+          },
+          {
+            "label": "Сеймская улица",
+            "delay": 62
+          },
+          {
+            "label": "Машнино",
+            "delay": 65
+          },
+          {
+            "label": "Урочище Алех",
+            "delay": 68
+          },
+          {
+            "label": "Шумаковский пляж",
+            "delay": 70
+          },
+          {
+            "label": "Набережная улица - Шумаково",
+            "delay": 72
+          },
+          {
+            "label": "Шумаково",
+            "delay": 73
+          },
+          {
+            "label": "Центральная улица - Шумаково",
+            "delay": 74
+          },
+          {
+            "label": "Ленинчи - Железнодороностанционный",
+            "delay": 76
+          },
+          {
+            "label": "ЖДС Шумаково (Конечная)",
+            "delay": 76
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: Автостанция",
+        "points": [
+          {
+            "label": "ЖДС Шумаково",
+            "delay": 0
+          },
+          {
+            "label": "Станционная улица",
+            "delay": 1
+          },
+          {
+            "label": "Центральная улица - Шумаково",
+            "delay": 3
+          },
+          {
+            "label": "Шумаково",
+            "delay": 4
+          },
+          {
+            "label": "Набережная улица - Шумаково",
+            "delay": 4
+          },
+          {
+            "label": "Шумаковский пляж",
+            "delay": 6
+          },
+          {
+            "label": "Озеро Глинка",
+            "delay": 8
+          },
+          {
+            "label": "Машнино",
+            "delay": 11
+          },
+          {
+            "label": "Сеймская улица",
+            "delay": 14
+          },
+          {
+            "label": "Второе Максимово",
+            "delay": 18
+          },
+          {
+            "label": "Урочище Роща",
+            "delay": 20
+          },
+          {
+            "label": "Гвардейская улица",
+            "delay": 22
+          },
+          {
+            "label": "Выползово",
+            "delay": 24
+          },
+          {
+            "label": "Урочище Выгори",
+            "delay": 26
+          },
+          {
+            "label": "Выползовское кладбище",
+            "delay": 27
+          },
+          {
+            "label": "Улица Марии Овсянниковой",
+            "delay": 33
+          },
+          {
+            "label": "Корпоративная",
+            "delay": 35
+          },
+          {
+            "label": "Меловая-3",
+            "delay": 39
+          },
+          {
+            "label": "Заречная улица - Меловая-2",
+            "delay": 41
+          },
+          {
+            "label": "Меловая-1",
+            "delay": 42
+          },
+          {
+            "label": "Урочище Мандрыкино",
+            "delay": 45
+          },
+          {
+            "label": "Пляж",
+            "delay": 47
+          },
+          {
+            "label": "Урочище Зуевское",
+            "delay": 48
+          },
+          {
+            "label": "Малозуевское кладбище",
+            "delay": 51
+          },
+          {
+            "label": "Малая Зуевка",
+            "delay": 53
+          },
+          {
+            "label": "Урочище Дубовое",
+            "delay": 53
+          },
+          {
+            "label": "Пляж",
+            "delay": 57
+          },
+          {
+            "label": "АЗС на Погореловке",
+            "delay": 60
+          },
+          {
+            "label": "Зуевский Дом культуры",
+            "delay": 61
+          },
+          {
+            "label": "Дорожная улица",
+            "delay": 63
+          },
+          {
+            "label": "Ручей Меловский",
+            "delay": 65
+          },
+          {
+            "label": "Базарная улица",
+            "delay": 67
+          },
+          {
+            "label": "Кафе «Афродита»",
+            "delay": 69
+          },
+          {
+            "label": "Ветклиника",
+            "delay": 71
+          },
+          {
+            "label": "Сеть быстрого питания «Сити»",
+            "delay": 73
+          },
+          {
+            "label": "Почтовая улица, дом 8",
+            "delay": 75
+          },
+          {
+            "label": "Автостанция (Конечная)",
+            "delay": 76
+          }
+        ]
+      }
+    }
+  },
+  "к1": {
+    "fullName": "Автобус к1 (Детский лагерь) [Кольцевой]",
+    "title": "Маршрут к1 [Кольцевой]",
+    "timings": {
+      "workday": [
+        "06:00",
+        "07:30",
+        "09:00",
+        "10:30",
+        "12:00",
+        "13:30",
+        "15:00",
+        "16:30",
+        "18:00",
+        "19:30",
+        "21:00",
+        "22:20"
+      ],
+      "weekend": [
+        "06:30",
+        "08:50",
+        "11:10",
+        "13:30",
+        "15:50",
+        "18:10",
+        "20:30",
+        "22:20"
+      ]
+    },
+    "vectors": {
+      "circular": {
+        "name": "Кольцевой (Против часовой стрелки)",
+        "points": [
+          {
+            "label": "Детский лагерь (до кольцевого участка)",
+            "delay": 0
+          },
+          {
+            "label": "Поворот на улицу Чекулаева (до кольцевого участка)",
+            "delay": 2
+          },
+          {
+            "label": "Сеть быстрого питания \"Сити\" (до кольцевого участка)",
+            "delay": 4
+          },
+          {
+            "label": "Переулок Победы (до кольцевого участка)",
+            "delay": 6
+          },
+          {
+            "label": "Улица Чекулаева (до кольцевого участка)",
+            "delay": 8
+          },
+          {
+            "label": "АЗС на Заречной (до кольцевого участка)",
+            "delay": 10
+          },
+          {
+            "label": "Болотный переулок (в кольцевом участке)",
+            "delay": 12
+          },
+          {
+            "label": "ДСП «Адмирал» (в кольцевом участке)",
+            "delay": 14
+          },
+          {
+            "label": "Ж/Д Переезд на Жуковке (в кольцевом участке)",
+            "delay": 16
+          },
+          {
+            "label": "Улица Вылетаевка, 17 (в кольцевом участке)",
+            "delay": 18
+          },
+          {
+            "label": "Водонапорная башня (по требованию) (в кольцевом участке)",
+            "delay": 20
+          },
+          {
+            "label": "Обоянская улица, 5 (в кольцевом участке)",
+            "delay": 22
+          },
+          {
+            "label": "Река Ивица (в кольцевом участке)",
+            "delay": 24
+          },
+          {
+            "label": "Обоянская улица, 21 (в кольцевом участке)",
+            "delay": 26
+          },
+          {
+            "label": "Профессиональное училище №34 (в кольцевом участке)",
+            "delay": 28
+          },
+          {
+            "label": "Улица Чибисовка (в кольцевом участке)",
+            "delay": 30
+          },
+          {
+            "label": "АЗС на Заречной (после кольцевого участка)",
+            "delay": 32
+          },
+          {
+            "label": "Улица Чекулаева (после кольцевого участка)",
+            "delay": 34
+          },
+          {
+            "label": "Сеть быстрого питания \"Сити\" (после кольцевого участка)",
+            "delay": 36
+          },
+          {
+            "label": "2-я улица Пушкина (после кольцевого участка)",
+            "delay": 38
+          },
+          {
+            "label": "Первомайский переулок (после кольцевого участка)",
+            "delay": 40
+          },
+          {
+            "label": "Поворот на Заречную улицу (после кольцевого участка)",
+            "delay": 42
+          },
+          {
+            "label": "Детский лагерь (после кольцевого участка)",
+            "delay": 44
+          }
+        ]
+      }
+    }
+  },
+  "3п": {
+    "fullName": "Автобус 3п (Река Сейм — Центр)",
+    "title": "Маршрут 3п",
+    "timings": {
+      "workday": [
+        "06:00",
+        "07:30",
+        "09:00",
+        "10:30",
+        "12:00",
+        "13:30",
+        "15:00",
+        "16:30",
+        "18:00",
+        "19:30",
+        "21:00",
+        "22:40"
+      ],
+      "weekend": [
+        "06:20",
+        "08:20",
+        "10:20",
+        "12:20",
+        "14:20",
+        "16:20",
+        "18:20",
+        "20:20",
+        "22:40"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: Центр",
+        "points": [
+          {
+            "label": "Река Сейм",
+            "delay": 0
+          },
+          {
+            "label": "Улица Королькова",
+            "delay": 3
+          },
+          {
+            "label": "1-я Луговая улица",
+            "delay": 6
+          },
+          {
+            "label": "Кафе «Урарту»",
+            "delay": 9
+          },
+          {
+            "label": "Солнцевская школа",
+            "delay": 12
+          },
+          {
+            "label": "Улица 50 лет Октября (по требованию)",
+            "delay": 14
+          },
+          {
+            "label": "Центр (Конечная, только высадка)",
+            "delay": 17
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: Река Сейм",
+        "points": [
+          {
+            "label": "Центр (только посадка)",
+            "delay": 0
+          },
+          {
+            "label": "Улица 40 лет Октября (по требованию)",
+            "delay": 3
+          },
+          {
+            "label": "МФЦ",
+            "delay": 6
+          },
+          {
+            "label": "Кафе «Урарту»",
+            "delay": 9
+          },
+          {
+            "label": "1-я Луговая улица",
+            "delay": 12
+          },
+          {
+            "label": "Улица Королькова",
+            "delay": 14
+          },
+          {
+            "label": "Река Сейм (Конечная)",
+            "delay": 17
+          }
+        ]
+      }
+    }
+  },
+  "7": {
+    "fullName": "Автобус 7 (Рябиновая улица — Автостанция)",
+    "title": "Маршрут 7",
+    "timings": {
+      "workday": [
+        "06:10",
+        "08:10",
+        "10:10",
+        "12:10",
+        "14:10",
+        "16:10",
+        "18:10",
+        "20:10",
+        "22:40"
+      ],
+      "weekend": [
+        "06:40",
+        "09:40",
+        "12:40",
+        "15:40",
+        "18:40",
+        "21:40"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: Автостанция",
+        "points": [
+          {
+            "label": "Рябиновая улица",
+            "delay": 0
+          },
+          {
+            "label": "Улица Кочерыжник",
+            "delay": 2
+          },
+          {
+            "label": "Улица Поповка",
+            "delay": 4
+          },
+          {
+            "label": "Зуевское Старое кладбище",
+            "delay": 6
+          },
+          {
+            "label": "Центральная улица - Заречная",
+            "delay": 8
+          },
+          {
+            "label": "Зуевская школа",
+            "delay": 11
+          },
+          {
+            "label": "Зуевский детский сад",
+            "delay": 13
+          },
+          {
+            "label": "Улица Меловское",
+            "delay": 15
+          },
+          {
+            "label": "Переулок Ленина",
+            "delay": 18
+          },
+          {
+            "label": "Пожарная часть",
+            "delay": 20
+          },
+          {
+            "label": "Филиал Сбербанка",
+            "delay": 21
+          },
+          {
+            "label": "Центр",
+            "delay": 22
+          },
+          {
+            "label": "Магазин \"Пятёрочка\"",
+            "delay": 23
+          },
+          {
+            "label": "Солнцевский центр соцпомощи \"Успех\"",
+            "delay": 24
+          },
+          {
+            "label": "Автостанция (Конечная)",
+            "delay": 25
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: Рябиновая улица",
+        "points": [
+          {
+            "label": "Автостанция",
+            "delay": 0
+          },
+          {
+            "label": "Солнцевский центр соцпомощи \"Успех\"",
+            "delay": 1
+          },
+          {
+            "label": "Магазин \"Пятёрочка\"",
+            "delay": 2
+          },
+          {
+            "label": "Центр",
+            "delay": 3
+          },
+          {
+            "label": "Филиал Сбербанка",
+            "delay": 4
+          },
+          {
+            "label": "Пожарная часть",
+            "delay": 5
+          },
+          {
+            "label": "Стройка",
+            "delay": 8
+          },
+          {
+            "label": "Улица Меловское",
+            "delay": 10
+          },
+          {
+            "label": "Зуевский детский сад",
+            "delay": 12
+          },
+          {
+            "label": "Зуевская школа",
+            "delay": 14
+          },
+          {
+            "label": "Центральная улица - Заречная",
+            "delay": 17
+          },
+          {
+            "label": "Зуевское Новое кладбище",
+            "delay": 20
+          },
+          {
+            "label": "Улица Вылетаевка",
+            "delay": 21
+          },
+          {
+            "label": "Улица Кочерыжник",
+            "delay": 23
+          },
+          {
+            "label": "Рябиновая улица (Конечная)",
+            "delay": 25
+          }
+        ]
+      }
+    }
+  },
+  "11": {
+    "fullName": "Автобус 11 (ЖДС Шумаково — Река Сейм)",
+    "title": "Маршрут 11",
+    "timings": {
+      "workday": [
+        "06:00",
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:30",
+        "12:00",
+        "13:30",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00",
+        "20:30",
+        "21:30",
+        "22:35"
+      ],
+      "weekend": [
+        "07:00",
+        "08:30",
+        "10:00",
+        "11:30",
+        "13:00",
+        "14:30",
+        "16:00",
+        "17:30",
+        "19:00",
+        "20:30",
+        "22:00"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: Река Сейм",
+        "points": [
+          {
+            "label": "ЖДС Шумаково",
+            "delay": 0
+          },
+          {
+            "label": "Станционная улица",
+            "delay": 1
+          },
+          {
+            "label": "Машкино",
+            "delay": 2
+          },
+          {
+            "label": "Школа",
+            "delay": 3
+          },
+          {
+            "label": "Речная улица",
+            "delay": 5
+          },
+          {
+            "label": "Алексеевка",
+            "delay": 7
+          },
+          {
+            "label": "Улица И. Р. Медведевой",
+            "delay": 9
+          },
+          {
+            "label": "Максимово",
+            "delay": 10
+          },
+          {
+            "label": "Полевая улица",
+            "delay": 11
+          },
+          {
+            "label": "Барский лес",
+            "delay": 12
+          },
+          {
+            "label": "Халино",
+            "delay": 14
+          },
+          {
+            "label": "Улица Победы",
+            "delay": 16
+          },
+          {
+            "label": "Дорохо-Доренское",
+            "delay": 17
+          },
+          {
+            "label": "Конарево-2",
+            "delay": 19
+          },
+          {
+            "label": "Центральная улица - ЖДС Гридасово",
+            "delay": 21
+          },
+          {
+            "label": "ЖДС Гридасово",
+            "delay": 22
+          },
+          {
+            "label": "Урочище Солнцевское",
+            "delay": 24
+          },
+          {
+            "label": "Лесная улица",
+            "delay": 26
+          },
+          {
+            "label": "Солнцевское ПАТП",
+            "delay": 28
+          },
+          {
+            "label": "Ивановка",
+            "delay": 30
+          },
+          {
+            "label": "Центральная улица, Ивановка",
+            "delay": 32
+          },
+          {
+            "label": "Сеймская улица",
+            "delay": 34
+          },
+          {
+            "label": "ДСП «Адмирал»",
+            "delay": 36
+          },
+          {
+            "label": "Болотный переулок",
+            "delay": 38
+          },
+          {
+            "label": "АЗС на Заречной",
+            "delay": 40
+          },
+          {
+            "label": "Улица Чекулаева (ЦРБ)",
+            "delay": 42
+          },
+          {
+            "label": "Кафе «Урарту»",
+            "delay": 44
+          },
+          {
+            "label": "Почта России",
+            "delay": 46
+          },
+          {
+            "label": "Первомайская улица",
+            "delay": 48
+          },
+          {
+            "label": "Базарная улица, 26",
+            "delay": 50
+          },
+          {
+            "label": "Базарная улица",
+            "delay": 52
+          },
+          {
+            "label": "2-я Луговая улица, 108",
+            "delay": 54
+          },
+          {
+            "label": "Улица Строителей, 18А",
+            "delay": 56
+          },
+          {
+            "label": "Улица Строителей, 26",
+            "delay": 58
+          },
+          {
+            "label": "Улица Строителей, 34",
+            "delay": 60
+          },
+          {
+            "label": "2-я Луговая улица",
+            "delay": 62
+          },
+          {
+            "label": "Набережная улица",
+            "delay": 64
+          },
+          {
+            "label": "Река Сейм (Конечная)",
+            "delay": 66
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: ЖДС Шумаково",
+        "points": [
+          {
+            "label": "Река Сейм",
+            "delay": 0
+          },
+          {
+            "label": "Набережная улица",
+            "delay": 2
+          },
+          {
+            "label": "Улица Королькова",
+            "delay": 4
+          },
+          {
+            "label": "2-я Луговая улица",
+            "delay": 6
+          },
+          {
+            "label": "Ветклиника",
+            "delay": 8
+          },
+          {
+            "label": "Улица Строителей, 26",
+            "delay": 10
+          },
+          {
+            "label": "Улица Строителей, 18А",
+            "delay": 12
+          },
+          {
+            "label": "2-я Луговая улица, 108",
+            "delay": 14
+          },
+          {
+            "label": "Базарная улица",
+            "delay": 16
+          },
+          {
+            "label": "Базарная улица, 26",
+            "delay": 18
+          },
+          {
+            "label": "Первомайская улица",
+            "delay": 20
+          },
+          {
+            "label": "Солнцевская школа",
+            "delay": 22
+          },
+          {
+            "label": "Кафе «Урарту»",
+            "delay": 24
+          },
+          {
+            "label": "Переулок Победы",
+            "delay": 26
+          },
+          {
+            "label": "АЗС на Заречной",
+            "delay": 28
+          },
+          {
+            "label": "Болотный переулок",
+            "delay": 30
+          },
+          {
+            "label": "ДСП «Адмирал»",
+            "delay": 32
+          },
+          {
+            "label": "Сеймская улица",
+            "delay": 34
+          },
+          {
+            "label": "Центральная улица, Ивановка",
+            "delay": 36
+          },
+          {
+            "label": "Ивановка",
+            "delay": 38
+          },
+          {
+            "label": "Солнцевское ПАТП",
+            "delay": 40
+          },
+          {
+            "label": "Лесная улица",
+            "delay": 42
+          },
+          {
+            "label": "Урочище Солнцевское",
+            "delay": 44
+          },
+          {
+            "label": "ЖДС Гридасово",
+            "delay": 46
+          },
+          {
+            "label": "Центральная улица - ЖДС Гридасово",
+            "delay": 48
+          },
+          {
+            "label": "Конарево-2",
+            "delay": 50
+          },
+          {
+            "label": "Дорохо-Доренское",
+            "delay": 52
+          },
+          {
+            "label": "Улица Победы",
+            "delay": 53
+          },
+          {
+            "label": "Халино",
+            "delay": 55
+          },
+          {
+            "label": "Барский лес",
+            "delay": 56
+          },
+          {
+            "label": "Полевая улица",
+            "delay": 57
+          },
+          {
+            "label": "Максимово",
+            "delay": 59
+          },
+          {
+            "label": "Урочище Максимовское",
+            "delay": 60
+          },
+          {
+            "label": "Алексеевка",
+            "delay": 62
+          },
+          {
+            "label": "Речная улица",
+            "delay": 64
+          },
+          {
+            "label": "Школа",
+            "delay": 66
+          },
+          {
+            "label": "Машкино",
+            "delay": 67
+          },
+          {
+            "label": "Ленинчи - Железнодороностанционный",
+            "delay": 67
+          },
+          {
+            "label": "ЖДС Шумаково (Конечная)",
+            "delay": 68
+          }
+        ]
+      }
+    }
+  },
+  "13п": {
+    "fullName": "Автобус 13п (Детский лагерь — Центр)",
+    "title": "Маршрут 13п",
+    "timings": {
+      "workday": [
+        "06:15",
+        "07:45",
+        "09:15",
+        "10:45",
+        "12:15",
+        "13:45",
+        "15:15",
+        "16:45",
+        "18:15",
+        "19:45",
+        "21:15",
+        "22:40"
+      ],
+      "weekend": [
+        "06:40",
+        "08:40",
+        "10:40",
+        "12:40",
+        "14:40",
+        "16:40",
+        "18:40",
+        "20:40",
+        "22:40"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: Центр",
+        "points": [
+          {
+            "label": "Детский лагерь",
+            "delay": 0
+          },
+          {
+            "label": "Поворот на Заречную улицу",
+            "delay": 2
+          },
+          {
+            "label": "ЦРБ",
+            "delay": 4
+          },
+          {
+            "label": "Улица Таманская",
+            "delay": 6
+          },
+          {
+            "label": "Улица Свободы",
+            "delay": 8
+          },
+          {
+            "label": "1-я Привокзальная улица",
+            "delay": 10
+          },
+          {
+            "label": "Автостанция",
+            "delay": 12
+          },
+          {
+            "label": "Солнцевский центр соцпомощи \"Успех\"",
+            "delay": 14
+          },
+          {
+            "label": "Стоматология",
+            "delay": 16
+          },
+          {
+            "label": "Магазин \"Пятёрочка\"",
+            "delay": 18
+          },
+          {
+            "label": "Центр (Конечная)",
+            "delay": 20
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: Детский лагерь",
+        "points": [
+          {
+            "label": "Центр",
+            "delay": 0
+          },
+          {
+            "label": "Филиал Сбербанка",
+            "delay": 2
+          },
+          {
+            "label": "Улица 50 лет Октября",
+            "delay": 4
+          },
+          {
+            "label": "Первомайская улица",
+            "delay": 6
+          },
+          {
+            "label": "МФЦ",
+            "delay": 8
+          },
+          {
+            "label": "Улица 40 лет Октября",
+            "delay": 10
+          },
+          {
+            "label": "Улица Октябрьская",
+            "delay": 12
+          },
+          {
+            "label": "Магазин \"Пятёрочка\"",
+            "delay": 14
+          },
+          {
+            "label": "Стоматология",
+            "delay": 16
+          },
+          {
+            "label": "Солнцевский центр соцпомощи \"Успех\"",
+            "delay": 18
+          },
+          {
+            "label": "Автостанция",
+            "delay": 20
+          },
+          {
+            "label": "Переулок Победы",
+            "delay": 22
+          },
+          {
+            "label": "Больничная улица",
+            "delay": 24
+          },
+          {
+            "label": "Улица Чекулаева",
+            "delay": 26
+          },
+          {
+            "label": "ЦРБ",
+            "delay": 28
+          },
+          {
+            "label": "Поворот на 2-ую улицу Пушкина",
+            "delay": 30
+          },
+          {
+            "label": "Детский лагерь (Конечная)",
+            "delay": 32
+          }
+        ]
+      }
+    }
+  },
+  "78пг": {
+    "fullName": "Автобус 78пг ДСП \"Адмирал\" — Маликов сад",
+    "title": "Маршрут 78пг",
+    "gen": true,
+    "timings": {
+      "workday": [
+        "06:30",
+        "07:10",
+        "07:50",
+        "08:30",
+        "09:10",
+        "09:50",
+        "10:30",
+        "11:10",
+        "11:50",
+        "12:30",
+        "13:10",
+        "13:50",
+        "14:30",
+        "15:10",
+        "15:50",
+        "16:30",
+        "17:10",
+        "17:50",
+        "18:30",
+        "19:10",
+        "19:50",
+        "20:30"
+      ],
+      "weekend": [
+        "07:30",
+        "08:30",
+        "09:30",
+        "10:30",
+        "11:30",
+        "12:30",
+        "13:30",
+        "14:30",
+        "15:30",
+        "16:30",
+        "17:30",
+        "18:30",
+        "19:30"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: Маликов сад",
+        "points": [
+          {
+            "label": "ДСП \"Адмирал\"",
+            "delay": 1
+          },
+          {
+            "label": "Болотный переулок",
+            "delay": 3
+          },
+          {
+            "label": "АЗС на Заречной",
+            "delay": 4
+          },
+          {
+            "label": "Улица Чекулаева",
+            "delay": 5
+          },
+          {
+            "label": "Кафе \"Урарту\"",
+            "delay": 8
+          },
+          {
+            "label": "Ветклиника",
+            "delay": 10
+          },
+          {
+            "label": "Кафе «Афродита»",
+            "delay": 11
+          },
+          {
+            "label": "Дом Культуры",
+            "delay": 12
+          },
+          {
+            "label": "Ручей Меловский",
+            "delay": 15
+          },
+          {
+            "label": "Дорожная улица",
+            "delay": 17
+          },
+          {
+            "label": "Магазин «Зуевский»",
+            "delay": 18
+          },
+          {
+            "label": "Новая улица",
+            "delay": 19
+          },
+          {
+            "label": "Никольская церковь",
+            "delay": 20
+          },
+          {
+            "label": "Центральная улица - Заречная",
+            "delay": 21
+          },
+          {
+            "label": "Заречная улица, 17",
+            "delay": 21
+          },
+          {
+            "label": "Маликов сад",
+            "delay": 22
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: ДСП \"Адмирал\"",
+        "points": [
+          {
+            "label": "Маликов сад",
+            "delay": 1
+          },
+          {
+            "label": "Заречная улица, 17",
+            "delay": 2
+          },
+          {
+            "label": "Центральная улица - Заречная",
+            "delay": 3
+          },
+          {
+            "label": "Никольская церковь",
+            "delay": 4
+          },
+          {
+            "label": "Новая улица",
+            "delay": 4
+          },
+          {
+            "label": "Магазин «Зуевский»",
+            "delay": 5
+          },
+          {
+            "label": "Дорожная улица",
+            "delay": 6
+          },
+          {
+            "label": "Ручей Меловский",
+            "delay": 9
+          },
+          {
+            "label": "Базарная улица",
+            "delay": 10
+          },
+          {
+            "label": "Кафе «Афродита»",
+            "delay": 12
+          },
+          {
+            "label": "Ветклиника",
+            "delay": 13
+          },
+          {
+            "label": "Кафе \"Урарту\"",
+            "delay": 15
+          },
+          {
+            "label": "Переулок Победы",
+            "delay": 17
+          },
+          {
+            "label": "Улица Чекулаева",
+            "delay": 18
+          },
+          {
+            "label": "АЗС на Заречной",
+            "delay": 19
+          },
+          {
+            "label": "Болотный переулок",
+            "delay": 21
+          },
+          {
+            "label": "ДСП \"Адмирал\"",
+            "delay": 23
+          }
+        ]
+      }
+    }
+  },
+  "19": {
+    "fullName": "Автобус 19 Малая Зуевка — Дежевка",
+    "title": "Маршрут 19",
+    "gen": true,
+    "timings": {
+      "workday": [
+        "06:30",
+        "07:10",
+        "07:50",
+        "08:30",
+        "09:10",
+        "09:50",
+        "10:30",
+        "11:10",
+        "11:50",
+        "12:30",
+        "13:10",
+        "13:50",
+        "14:30",
+        "15:10",
+        "15:50",
+        "16:30",
+        "17:10",
+        "17:50",
+        "18:30",
+        "19:10",
+        "19:50",
+        "20:30"
+      ],
+      "weekend": [
+        "07:30",
+        "08:30",
+        "09:30",
+        "10:30",
+        "11:30",
+        "12:30",
+        "13:30",
+        "14:30",
+        "15:30",
+        "16:30",
+        "17:30",
+        "18:30",
+        "19:30"
+      ]
+    },
+    "vectors": {
+      "forward": {
+        "name": "В сторону: Дежевка",
+        "points": [
+          {
+            "label": "Малая Зуевка",
+            "delay": 0
+          },
+          {
+            "label": "Урочище Дубовое",
+            "delay": 2
+          },
+          {
+            "label": "Пляж",
+            "delay": 6
+          },
+          {
+            "label": "АЗС на Погореловке",
+            "delay": 8
+          },
+          {
+            "label": "Улица Погореловка",
+            "delay": 9
+          },
+          {
+            "label": "Никольская церковь",
+            "delay": 10
+          },
+          {
+            "label": "Центральная улица - Заречная",
+            "delay": 11
+          },
+          {
+            "label": "Зуевское Новое кладбище",
+            "delay": 13
+          },
+          {
+            "label": "Зуевка-2",
+            "delay": 14
+          },
+          {
+            "label": "Центральная улица - Поворотная, 100",
+            "delay": 16
+          },
+          {
+            "label": "Центральная улица - Поворотная, дом 164",
+            "delay": 18
+          },
+          {
+            "label": "Центральная улица - Поворотная, дом 162",
+            "delay": 20
+          },
+          {
+            "label": "ЖДС Надежевка",
+            "delay": 24
+          },
+          {
+            "label": "Поворот на Луговую улицу - Александровскую",
+            "delay": 27
+          },
+          {
+            "label": "Александровка",
+            "delay": 28
+          },
+          {
+            "label": "Река Ржава",
+            "delay": 30
+          },
+          {
+            "label": "Надежевка",
+            "delay": 31
+          },
+          {
+            "label": "Поворот на Луговую улицу - Надежевскую",
+            "delay": 32
+          },
+          {
+            "label": "Центральная улица - Дежевская, дом 2",
+            "delay": 35
+          },
+          {
+            "label": "Дежевская школа",
+            "delay": 36
+          },
+          {
+            "label": "Дежевка (Конечная)",
+            "delay": 38
+          }
+        ]
+      },
+      "backward": {
+        "name": "В сторону: Малая Зуевка",
+        "points": [
+          {
+            "label": "Дежевка",
+            "delay": 0
+          },
+          {
+            "label": "Школьная улица",
+            "delay": 1
+          },
+          {
+            "label": "Дежевская школа",
+            "delay": 2
+          },
+          {
+            "label": "Центральная улица - Дежевская, дом 2",
+            "delay": 3
+          },
+          {
+            "label": "Поворот на Луговую улицу - Надежевскую",
+            "delay": 6
+          },
+          {
+            "label": "Надежевка",
+            "delay": 7
+          },
+          {
+            "label": "Река Ржава",
+            "delay": 8
+          },
+          {
+            "label": "Александровка",
+            "delay": 10
+          },
+          {
+            "label": "Поворот на Луговую улицу - Александровскую",
+            "delay": 11
+          },
+          {
+            "label": "ЖДС Надежевка",
+            "delay": 14
+          },
+          {
+            "label": "Центральная улица - Поворотная, дом 162",
+            "delay": 18
+          },
+          {
+            "label": "Центральная улица - Поворотная, дом 164",
+            "delay": 20
+          },
+          {
+            "label": "Центральная улица - Поворотная, 100",
+            "delay": 22
+          },
+          {
+            "label": "Зуевка-2",
+            "delay": 24
+          },
+          {
+            "label": "Зуевское Новое кладбище",
+            "delay": 25
+          },
+          {
+            "label": "Центральная улица - Заречная",
+            "delay": 27
+          },
+          {
+            "label": "Никольская церковь",
+            "delay": 28
+          },
+          {
+            "label": "Улица Погореловка",
+            "delay": 29
+          },
+          {
+            "label": "АЗС на Погореловке",
+            "delay": 30
+          },
+          {
+            "label": "Пляж",
+            "delay": 32
+          },
+          {
+            "label": "Урочище Дубовое",
+            "delay": 36
+          },
+          {
+            "label": "Малая Зуевка (Конечная)",
+            "delay": 38
+          }
+        ]
+      }
+    }
+  }
+};
+
+  let state = {
+    dayMode: 'workday',
+    routeId: null,
+    vecId: null,
+    stopIdx: null,
+    departedOpen: false
+  };
+
+  let liveRefreshInterval = null;
+
+  function getTransitMinutes(hours, minutes) {
+    let mins = hours * 60 + minutes;
+    if (mins < 240) mins += 1440; 
+    return mins;
+  }
+
+  function getMoscowTime() {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Europe/Moscow",
+      hour: "numeric",
+      minute: "numeric"
+    });
+    const parts = formatter.formatToParts(now);
+    let hours = now.getHours();
+    let minutes = now.getMinutes();
+    
+    parts.forEach(p => {
+      if (p.type === 'hour') hours = parseInt(p.value, 10);
+      if (p.type === 'minute') minutes = parseInt(p.value, 10);
+    });
+    
+    return {
+      hours: hours,
+      minutes: minutes,
+      transitMinutes: getTransitMinutes(hours, minutes)
+    };
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll('.custom-dropdown-container').forEach(el => el.classList.remove('open'));
+  }
+
+  document.addEventListener('click', () => { closeAllDropdowns(); });
+
+  function toggleDropdown(event, id) {
+    event.stopPropagation();
+    const container = document.getElementById(id);
+    const trigger = container.querySelector('.custom-dropdown-trigger');
+    
+    if (trigger.classList.contains('disabled')) return;
+    
+    const wasOpen = container.classList.contains('open');
+    closeAllDropdowns();
+    if (!wasOpen) {
+      container.classList.add('open');
+    }
+  }
+
+  function changeDayMode(mode) {
+    state.dayMode = mode;
+    document.getElementById('tabWorkday').classList.toggle('active', mode === 'workday');
+    document.getElementById('tabWeekend').classList.toggle('active', mode === 'weekend');
+    renderSchedule();
+  }
+
+  function triggerPulse(element) {
+    element.classList.remove('ready-pulse');
+    void element.offsetWidth; 
+    element.classList.add('ready-pulse');
+  }
+
+  function resetFlow() {
+    state.routeId = null;
+    state.vecId = null;
+    state.stopIdx = null;
+
+    document.getElementById('routeFieldGroup').style.display = 'block';
+    document.getElementById('dirFieldGroup').style.display = 'none';
+    document.getElementById('stopFieldGroup').style.display = 'none';
+    document.getElementById('dayModeFieldGroup').style.display = 'none';
+
+    clearBoard();
+  }
+
+  function initRoutes() {
+    const container = document.getElementById('routeButtonsContainer');
+    container.innerHTML = '';
+    
+    const routeOrder = ['2', 'к1', '3п', '7', '11', '13п', '78пг', '19'];
+    for (const key of routeOrder.filter(k => database[k])) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'selection-btn';
+      btn.textContent = database[key].fullName;
+      btn.onclick = () => selectRoute(key);
+      container.appendChild(btn);
+    }
+  }
+
+  function selectRoute(routeId) {
+    state.routeId = routeId;
+    state.vecId = null;
+    state.stopIdx = null;
+
+    document.getElementById('routeFieldGroup').style.display = 'none';
+    document.getElementById('dirFieldGroup').style.display = 'block';
+    document.getElementById('stopFieldGroup').style.display = 'none';
+    document.getElementById('dayModeFieldGroup').style.display = 'none';
+
+    clearBoard();
+
+    const dirContainer = document.getElementById('dirButtonsContainer');
+    dirContainer.innerHTML = '';
+    
+    const routeData = database[routeId];
+    for (const vecKey in routeData.vectors) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'selection-btn';
+      btn.textContent = routeData.vectors[vecKey].name;
+      btn.onclick = () => selectDirection(vecKey);
+      dirContainer.appendChild(btn);
+    }
+  }
+
+  function selectDirection(vecId) {
+    state.vecId = vecId;
+    state.stopIdx = null;
+
+    document.getElementById('dirFieldGroup').style.display = 'none';
+    document.getElementById('stopFieldGroup').style.display = 'block';
+    document.getElementById('dayModeFieldGroup').style.display = 'none'; 
+
+    document.getElementById('stopLabel').textContent = '-- Выберите остановку --';
+    document.getElementById('stopLabel').style.color = "#64748B";
+    
+    const stopTrigger = document.getElementById('stopTrigger');
+    triggerPulse(stopTrigger);
+    
+    clearBoard();
+
+    const stopOptionsEl = document.getElementById('stopOptions');
+    stopOptionsEl.innerHTML = '';
+    
+    const vectorData = database[state.routeId].vectors[vecId];
+    vectorData.points.forEach((pt, idx) => {
+      const div = document.createElement('div');
+      div.className = 'custom-option';
+      div.textContent = pt.label + (pt.delay === 0 ? " (Начальная)" : " (+" + pt.delay + " мин)");
+      div.onclick = (e) => {
+        e.stopPropagation();
+        selectStop(idx, div.textContent, div);
+      };
+      stopOptionsEl.appendChild(div);
+    });
+  }
+
+  function selectStop(stopIdx, labelText, clickedEl) {
+    state.stopIdx = stopIdx;
+    
+    document.getElementById('stopLabel').textContent = labelText;
+    document.getElementById('stopLabel').style.color = "#000000";
+    
+    const container = document.getElementById('stopOptions');
+    container.querySelectorAll('.custom-option').forEach(el => el.classList.remove('selected'));
+    if(clickedEl) clickedEl.classList.add('selected');
+    
+    closeAllDropdowns();
+    
+    document.getElementById('dayModeFieldGroup').style.display = 'block';
+    
+    renderSchedule();
+  }
+
+  function clearBoard() {
+    if (liveRefreshInterval) {
+      clearInterval(liveRefreshInterval);
+      liveRefreshInterval = null;
+    }
+    const container = document.getElementById('boardContainer');
+    const content = document.getElementById('boardContent');
+    container.className = 'output-board';
+    content.className = 'placeholder-text';
+    content.innerHTML = 'Выберите параметры выше для вывода актуального расписания.';
+  }
+
+  function toggleDepartedSection() {
+    state.departedOpen = !state.departedOpen;
+    const section = document.getElementById('departedSection');
+    const panel = document.getElementById('departedPanel');
+    
+    if (state.departedOpen) {
+      section.classList.add('open');
+      panel.style.maxHeight = panel.scrollHeight + "px";
+    } else {
+      section.classList.remove('open');
+      panel.style.maxHeight = "0px";
+    }
+  }
+
+  function formatRemainingTime(totalMinutes) {
+    if (totalMinutes >= 60) {
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return minutes > 0 ? `${hours} ч ${minutes} мин` : `${hours} ч`;
+    }
+    return `${totalMinutes} мин`;
+  }
+
+  function renderSchedule() {
+    if (liveRefreshInterval) {
+      clearInterval(liveRefreshInterval);
+    }
+
+    const container = document.getElementById('boardContainer');
+    const content = document.getElementById('boardContent');
+
+    if (state.routeId === null || state.vecId === null || state.stopIdx === null) return;
+
+    const route = database[state.routeId];
+    const vector = route.vectors[state.vecId];
+    const targetPoint = vector.points[state.stopIdx];
+    const startTimings = route.timings[state.dayMode];
+
+    const mskTime = getMoscowTime();
+    const currentTransitMinutes = mskTime.transitMinutes;
+
+    container.className = 'output-board populated';
+    content.className = '';
+
+    let template = `<div class="meta-route-name">${route.title}</div>`;
+    template += `<div class="meta-direction"><img class="ico" src="free-icon-directional-arrows-4229482.png" alt="">${vector.name}</div>`;
+    template += `<div class="meta-current-stop"><img class="ico ico-lg" src="free-icon-bus-stop-3580523.png" alt="">Остановка: ${targetPoint.label}</div>`;
+    template += `<div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; font-weight: 500;">Текущее время (МСК): <strong>${String(mskTime.hours).padStart(2, '0')}:${String(mskTime.minutes).padStart(2, '0')}</strong></div>`;
+    
+    // ДОБАВЛЕНО УСЛОВИЕ ДЛЯ ЗАКРЫТОЙ ОСТАНОВКИ
+    if (state.routeId === '2' && targetPoint.label === 'Кафе «Афродита»') {
+      template += `
+        <div style="color: #DC2626; background: #FEF2F2; border: 1px dashed #F87171; border-radius: 12px; padding: 16px; margin-top: 16px; font-weight: 700; font-size: 16px; text-align: center;">
+          Расписания нет, так как остановка закрыта
+        </div>
+      `;
+    } else if (!startTimings || startTimings.length === 0) {
+      template += `<div style="color: #DC2626; font-weight: 700; margin-top: 10px;">Рейсы не предусмотрены.</div>`;
+    } else {
+      const offsetDelay = targetPoint.delay + 1; 
+
+      let arrivals = startTimings.map(time => {
+        let [baseH, baseM] = time.split(':').map(Number);
+        let arrivalTransitMins = getTransitMinutes(baseH, baseM) + offsetDelay;
+        
+        let h = Math.floor(arrivalTransitMins / 60) % 24;
+        let m = arrivalTransitMins % 60;
+        let arrivalTimeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+        return {
+          str: arrivalTimeStr,
+          transitMinutes: arrivalTransitMins
+        };
+      });
+
+      let departedBuses = arrivals.filter(arr => arr.transitMinutes < currentTransitMinutes);
+      let upcomingBuses = arrivals.filter(arr => arr.transitMinutes >= currentTransitMinutes);
+
+      let isTomorrowSchedule = false;
+
+      if (upcomingBuses.length === 0) {
+        isTomorrowSchedule = true;
+        upcomingBuses = [...arrivals]; 
+        departedBuses = []; 
+        
+        template += `
+          <div class="tomorrow-badge">
+            <span>🌙 Все рейсы на сегодня завершены. Отображается расписание на <strong>завтра</strong>!</span>
+          </div>
+        `;
+      }
+
+      template += `<div style="font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">${isTomorrowSchedule ? 'Рейсы на завтра:' : 'Предстоящие рейсы:'}</div>`;
+      
+      template += `<div class="grid-container">`;
+      upcomingBuses.forEach((arr, idx) => {
+        let badgeClass = "time-badge";
+        let statusText = "";
+
+        if (idx === 0) {
+          badgeClass += " next-closest";
+          
+          let diff;
+          if (isTomorrowSchedule) {
+            diff = (arr.transitMinutes + 1440) - currentTransitMinutes;
+          } else {
+            diff = arr.transitMinutes - currentTransitMinutes;
+          }
+
+          if (diff <= 1 && !isTomorrowSchedule) {
+            statusText = `<span class="arrival-status arriving">автобус прибывает</span>`;
+          } else {
+            statusText = `<span class="arrival-status">через ${formatRemainingTime(diff)}</span>`;
+          }
+        }
+
+        template += `
+          <div class="time-card">
+            <div class="${badgeClass}">${arr.str}</div>
+            ${statusText}
+          </div>
+        `;
+      });
+      template += `</div>`;
+
+      if (departedBuses.length > 0) {
+        template += `
+          <div class="departed-section" id="departedSection">
+            <button type="button" class="departed-toggle-btn" onclick="toggleDepartedSection()">
+              <span>📜 Показать ушедшие рейсы (${departedBuses.length})</span>
+              <span class="arrow">▼</span>
+            </button>
+            <div class="departed-panel" id="departedPanel">
+              <div class="grid-container">
+        `;
+        
+        departedBuses.forEach(arr => {
+          template += `
+            <div class="time-card">
+              <div class="time-badge departed">${arr.str}</div>
+            </div>
+          `;
+        });
+
+        template += `
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (route.gen) template += `<span class="disclaimer">Расписание этого маршрута составлено автоматически.</span>`;
+      template += `<span class="disclaimer">* Время прибытия рассчитано автоматически с учётом удалённости от старта (+${offsetDelay} мин). Табло обновляется автоматически.</span>`;
+    }
+
+    content.innerHTML = template;
+
+    if (state.departedOpen && !isTomorrowSchedule) {
+      const section = document.getElementById('departedSection');
+      const panel = document.getElementById('departedPanel');
+      if (section && panel) {
+        section.classList.add('open');
+        panel.style.maxHeight = panel.scrollHeight + "px";
+      }
+    }
+
+    liveRefreshInterval = setInterval(renderSchedule, 15000);
+  }
+
+    /* ===== Проверка Cloudflare Turnstile ===== */
+  const TSK = '0x4AAAAAAFaA666PIDepV4LP';
+  const MBP = 'https://mapbox-proxy.burmaldeylvovich.workers.dev';
+
+  function gateSession() {
+    try { const o = JSON.parse(sessionStorage.getItem('mbs') || 'null'); if (o && o.s && o.e - Date.now() > 60000) return o; } catch (e) {}
+    return null;
+  }
+
+  function gate(go) {
+    const g = document.getElementById('gate');
+    let passed = false, tries = 0;
+    const done = () => {
+      if (passed) return; passed = true;
+      g.classList.add('hide'); setTimeout(() => g.remove(), 350);
+      go();
+    };
+    const fail = (m) => {
+      if (passed) return;
+      g.classList.add('err');
+      document.getElementById('gateTitle').textContent = 'Проверка не пройдена';
+      document.getElementById('gateMsg').textContent = m || 'Не удалось пройти проверку. Попробуйте ещё раз.';
+    };
+    if (gateSession()) return done();
+
+    const onTok = async (t) => {
+      if (passed) return;
+      try {
+        const r = await fetch(MBP + '/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: t }) });
+        const j = await r.json();
+        if (!r.ok || !j.s) throw 0;
+        try { sessionStorage.setItem('mbs', JSON.stringify({ s: j.s, e: Date.now() + (j.t || 21600) * 1000 })); } catch (e) {}
+        done();
+      } catch (e) { fail(); }
+    };
+    const init = () => {
+      if (!window.turnstile) {
+        if (++tries > 100) return fail('Не загрузилась проверка Cloudflare. Проверьте интернет.');
+        return setTimeout(init, 150);
+      }
+      turnstile.render('#gateTs', {
+        sitekey: TSK, appearance: 'interaction-only', 'refresh-expired': 'manual',
+        callback: onTok,
+        'error-callback': (c) => fail('Не удалось выполнить проверку (код ' + c + ').')
+      });
+    };
+    init();
+  }
+
+  window.onload = () => gate(initRoutes);
+</script>
+
+</body>
+</html>
